@@ -17,8 +17,15 @@ import java.util.logging.Logger;
  * <p>Utilise HikariCP pour gérer un pool de connexions performant
  * et réutilisable par l'ensemble des DAO de l'application.</p>
  *
- * <p>La configuration est chargée depuis le fichier
- * {@code db.properties} situé dans le classpath.</p>
+ * <p><b>Deux modes de configuration :</b></p>
+ * <ul>
+ *     <li><b>Mode cloud</b> (Railway, Render, Heroku...) : lit les variables
+ *         d'environnement {@code PGHOST}, {@code PGPORT}, {@code PGDATABASE},
+ *         {@code PGUSER}, {@code PGPASSWORD}.</li>
+ *     <li><b>Mode local</b> : lit le fichier {@code db.properties} du classpath.</li>
+ * </ul>
+ *
+ * <p>Le mode cloud est prioritaire s'il est détecté.</p>
  */
 public final class DatabaseConnection {
 
@@ -84,16 +91,49 @@ public final class DatabaseConnection {
     }
 
     /**
-     * Construit la configuration HikariCP à partir des propriétés.
+     * Construit la configuration HikariCP.
+     *
+     * <p>Priorité aux variables d'environnement (cloud) si {@code PGHOST}
+     * est défini. Sinon, utilise le fichier {@code db.properties} (local).</p>
      */
     private static HikariConfig buildHikariConfig(Properties properties) {
         HikariConfig config = new HikariConfig();
 
-        config.setJdbcUrl(properties.getProperty("db.url"));
-        config.setUsername(properties.getProperty("db.user"));
-        config.setPassword(properties.getProperty("db.password"));
-        config.setDriverClassName(properties.getProperty("db.driver"));
+        // =========================================================
+        // Détection du mode cloud (Railway, Render, Heroku...)
+        // =========================================================
+        String envHost = System.getenv("PGHOST");
+        String envPort = System.getenv("PGPORT");
+        String envDb   = System.getenv("PGDATABASE");
+        String envUser = System.getenv("PGUSER");
+        String envPass = System.getenv("PGPASSWORD");
 
+        if (envHost != null && !envHost.isBlank()) {
+            // ---------- MODE CLOUD ----------
+            String jdbcUrl = "jdbc:postgresql://" + envHost + ":" + envPort + "/" + envDb;
+
+            config.setJdbcUrl(jdbcUrl);
+            config.setUsername(envUser);
+            config.setPassword(envPass);
+            config.setDriverClassName("org.postgresql.Driver");
+
+            LOGGER.info("HikariCP : configuration CLOUD (variables d'environnement).");
+            LOGGER.info("HikariCP : URL = " + jdbcUrl);
+            LOGGER.info("HikariCP : USER = " + envUser);
+
+        } else {
+            // ---------- MODE LOCAL ----------
+            config.setJdbcUrl(properties.getProperty("db.url"));
+            config.setUsername(properties.getProperty("db.user"));
+            config.setPassword(properties.getProperty("db.password"));
+            config.setDriverClassName(properties.getProperty("db.driver"));
+
+            LOGGER.info("HikariCP : configuration LOCALE (db.properties).");
+        }
+
+        // =========================================================
+        // Paramètres du pool (communs aux deux modes)
+        // =========================================================
         config.setMaximumPoolSize(
                 Integer.parseInt(properties.getProperty("db.pool.maximumPoolSize", "10"))
         );
