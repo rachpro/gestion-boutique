@@ -1,0 +1,29 @@
+# 1. Arrêter Tomcat
+& "C:\apache-tomcat\bin\shutdown.bat"
+Start-Sleep -Seconds 5
+Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 2
+
+# 2. Compiler ET empaqueter
+cd "C:\Users\ACER\Desktop\ALL PROJECTS\Gestion-boutique\Frontend"
+mvn clean package
+
+# 3. Vérifier
+Test-Path ".\target\gestion-boutique.war"   # Doit être True
+
+# 4. Supprimer l'ancien déploiement
+Remove-Item "C:\apache-tomcat\webapps\gestion-boutique" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "C:\apache-tomcat\webapps\gestion-boutique.war" -Force -ErrorAction SilentlyContinue
+
+# 5. Copier le nouveau
+Copy-Item ".\target\gestion-boutique.war" "C:\apache-tomcat\webapps\gestion-boutique.war" -Force
+
+# 6. Démarrer Tomcat
+& "C:\apache-tomcat\bin\startup.bat"
+Start-Sleep -Seconds 15
+
+# 7. Ouvrir dans le navigateur
+Start-Process "http://localhost:8080/gestion-boutique/login"
+
+
+Redeploiement complet : .\redeploy.ps1

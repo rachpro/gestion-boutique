@@ -1,0 +1,6 @@
+Mot de passe : admin123
+Hash BCrypt  : $2a$12$e5Yz4RqAfqmu.QCwSPyvTOckYj1LpuDwHKfy49KKDmnczcjPpQHyC
+
+Identifiant : admin
+
+Mot de passe : admin123
